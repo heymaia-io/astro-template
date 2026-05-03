@@ -9,7 +9,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "deploy": "python3 scripts/deploy.py",
+    "deploy:no-build": "python3 scripts/deploy.py --skip-build"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.4",

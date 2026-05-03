@@ -1,0 +1,142 @@
+---
+/**
+ * Generic contact form wired to /contact.php.
+ *
+ * Required env: PUBLIC_TURNSTILE_SITE_KEY (in .env, baked in at build time).
+ * Backend:      public/contact.php  +  public/contact.config.php
+ * Frontend:     src/scripts/contact.ts
+ *
+ * Edit the strings below or expose them as props if you want per-page customization.
+ */
+
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+
+const labels = {
+  name: 'Nombre',
+  email: 'Correo electrónico',
+  phone: 'Teléfono',
+  subject: 'Asunto',
+  message: 'Mensaje',
+  submit: 'Enviar',
+  success: '¡Mensaje enviado! Nos pondremos en contacto pronto.',
+};
+
+const placeholders = {
+  name: 'Tu nombre completo',
+  email: 'tu@correo.com',
+  phone: 'Opcional',
+  subject: 'Opcional',
+  message: '¿En qué podemos ayudarte?',
+};
+---
+
+<form id="contact-form" class="space-y-4 max-w-xl" novalidate>
+  <!-- Honeypot: hidden from users, attractive to bots. -->
+  <input
+    type="text"
+    name="_hp"
+    tabindex="-1"
+    autocomplete="off"
+    class="hidden"
+    aria-hidden="true"
+  />
+
+  <div>
+    <label for="name" class="block text-sm font-semibold mb-1">{labels.name}</label>
+    <input
+      type="text"
+      id="name"
+      name="name"
+      placeholder={placeholders.name}
+      class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+      required
+    />
+  </div>
+
+  <div>
+    <label for="email" class="block text-sm font-semibold mb-1">{labels.email}</label>
+    <input
+      type="email"
+      id="email"
+      name="email"
+      placeholder={placeholders.email}
+      class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+      required
+    />
+  </div>
+
+  <div>
+    <label for="phone" class="block text-sm font-semibold mb-1">{labels.phone}</label>
+    <input
+      type="tel"
+      id="phone"
+      name="phone"
+      placeholder={placeholders.phone}
+      class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+    />
+  </div>
+
+  <div>
+    <label for="subject" class="block text-sm font-semibold mb-1">{labels.subject}</label>
+    <input
+      type="text"
+      id="subject"
+      name="subject"
+      placeholder={placeholders.subject}
+      class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+    />
+  </div>
+
+  <div>
+    <label for="message" class="block text-sm font-semibold mb-1">{labels.message}</label>
+    <textarea
+      id="message"
+      name="message"
+      rows="5"
+      placeholder={placeholders.message}
+      class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-y"
+      required
+    ></textarea>
+  </div>
+
+  <div
+    id="turnstile-widget"
+    class="cf-turnstile"
+    data-sitekey={TURNSTILE_SITE_KEY}
+    data-theme="auto"
+    data-size="flexible"
+  ></div>
+
+  <button
+    type="submit"
+    class="appearance-none w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-75 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+  >
+    {labels.submit}
+  </button>
+
+  <p
+    id="form-success"
+    class="hidden text-sm text-green-600 dark:text-green-400 text-center font-semibold"
+    role="status"
+    aria-live="polite"
+  >
+    {labels.success}
+  </p>
+  <p
+    id="form-error"
+    class="hidden text-sm text-red-600 dark:text-red-400 text-center font-semibold"
+    role="alert"
+    aria-live="polite"
+  ></p>
+</form>
+
+<script
+  is:inline
+  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  async
+  defer
+></script>
+
+<script>
+  import '../scripts/contact';
+</script>

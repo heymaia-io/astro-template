@@ -1,0 +1,23 @@
+# Local-only stack for testing the contact form end-to-end.
+#
+#   php       → serves ./dist (run `pnpm build` first) on http://localhost:8080
+#   mailpit   → fake SMTP catcher; UI on http://localhost:8025
+#
+# Every mail() call from contact.php is intercepted by msmtp (see Dockerfile)
+# and delivered to mailpit. Nothing leaves your machine.
+
+services:
+  php:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./dist:/var/www/html
+    depends_on:
+      - mailpit
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"

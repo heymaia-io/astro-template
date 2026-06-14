@@ -1,0 +1,175 @@
+---
+/**
+ * BaseLayout.astro
+ *
+ * General-purpose SEO layout for every page in the site.
+ * Handles the complete <head> (meta, OG, Twitter Card, JSON-LD, analytics).
+ * The <body> is unopinionated — it renders <slot /> only.
+ *
+ * Usage:
+ *   <BaseLayout title="Page Title" description="...">
+ *     <p>Your page content here.</p>
+ *   </BaseLayout>
+ *
+ * Extra head content (e.g. page-specific JSON-LD, preloads):
+ *   <BaseLayout title="...">
+ *     <link slot="head" rel="preload" href="/hero.webp" as="image" />
+ *   </BaseLayout>
+ */
+
+import '../styles/global.css';
+
+interface Props {
+	/** Page title — rendered in <title> and og:title. Required. */
+	title: string;
+	/** Meta description (≤155 chars) — og:description and twitter:description. */
+	description?: string;
+	/** Absolute URL for OG / Twitter card image. Defaults to /og-default.png. */
+	image?: string;
+	/**
+	 * Canonical URL for this page. When omitted the layout derives one from
+	 * Astro.url + Astro.site. Pass an absolute URL string to override.
+	 */
+	canonical?: string;
+	/** Emit <meta name="robots" content="noindex,nofollow"> when true. */
+	noindex?: boolean;
+	/** <html lang> attribute. Defaults to "en". */
+	lang?: string;
+	/** OpenGraph type. Defaults to "website". Use "article" for blog posts. */
+	type?: 'website' | 'article' | 'product' | string;
+	/** og:site_name — human-readable brand name shown in link previews. */
+	siteName?: string;
+	/** Theme color for browser chrome (mobile). */
+	themeColor?: string;
+}
+
+const {
+	title,
+	description = '',
+	image = '/og-default.png',
+	noindex = false,
+	lang = 'en',
+	type = 'website',
+	siteName = '',
+	themeColor = '#ffffff',
+} = Astro.props;
+
+// ---------------------------------------------------------------------------
+// Canonical URL
+// Prefer an explicit prop; otherwise build from Astro.url + Astro.site.
+// Astro.site may be undefined in dev when `site` is not set in astro.config.mjs,
+// so we fall back gracefully to Astro.url (a relative-origin URL).
+// ---------------------------------------------------------------------------
+const canonicalProp = Astro.props.canonical;
+let canonicalURL: string;
+if (canonicalProp) {
+	canonicalURL = canonicalProp;
+} else if (Astro.site) {
+	canonicalURL = new URL(Astro.url.pathname, Astro.site).href;
+} else {
+	// Graceful fallback: Astro.url is always defined, but its origin may be
+	// localhost in dev. This is acceptable — canonical tags are only meaningful
+	// in production where Astro.site should be set.
+	canonicalURL = Astro.url.href;
+}
+
+// ---------------------------------------------------------------------------
+// OG image — ensure it is always an absolute URL for social crawlers.
+// ---------------------------------------------------------------------------
+let ogImageURL: string;
+if (image.startsWith('http')) {
+	ogImageURL = image;
+} else if (Astro.site) {
+	ogImageURL = new URL(image, Astro.site).href;
+} else {
+	ogImageURL = image; // relative — will work once site is configured
+}
+
+// ---------------------------------------------------------------------------
+// Umami analytics — only rendered when the env var is set so that local dev
+// without the variable does not emit a broken <script> tag.
+// PUBLIC_ prefix is required for Astro to bake the value into the client build.
+// ---------------------------------------------------------------------------
+const umamiId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
+
+// ---------------------------------------------------------------------------
+// JSON-LD — minimal WebSite structured data. Gives search engines and AI
+// answer engines a machine-readable description of the site.
+// ---------------------------------------------------------------------------
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'WebSite',
+	...(siteName ? { name: siteName } : {}),
+	...(Astro.site ? { url: Astro.site.href } : {}),
+};
+---
+
+<!doctype html>
+<html lang={lang}>
+	<head>
+		<!-- Character encoding — must be first -->
+		<meta charset="utf-8" />
+
+		<!-- Viewport — mobile-first baseline -->
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+		<!-- Astro build generator tag (helps with debugging, no SEO impact) -->
+		<meta name="generator" content={Astro.generator} />
+
+		<!-- Theme color for browser chrome on Android Chrome / Safari PWA -->
+		<meta name="theme-color" content={themeColor} />
+
+		<!-- ── Core SEO ─────────────────────────────────────────────────── -->
+		<title>{title}</title>
+		{description && <meta name="description" content={description} />}
+		<link rel="canonical" href={canonicalURL} />
+		{noindex && <meta name="robots" content="noindex,nofollow" />}
+
+		<!-- ── Open Graph ────────────────────────────────────────────────── -->
+		<meta property="og:type" content={type} />
+		<meta property="og:title" content={title} />
+		{description && <meta property="og:description" content={description} />}
+		<meta property="og:url" content={canonicalURL} />
+		<meta property="og:image" content={ogImageURL} />
+		{siteName && <meta property="og:site_name" content={siteName} />}
+		<meta property="og:locale" content={lang.replace('-', '_')} />
+
+		<!-- ── Twitter / X Card ─────────────────────────────────────────── -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		{description && <meta name="twitter:description" content={description} />}
+		<meta name="twitter:image" content={ogImageURL} />
+
+		<!-- ── Favicons ──────────────────────────────────────────────────── -->
+		<!-- SVG is preferred by modern browsers; ICO is the legacy fallback -->
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+
+		<!-- ── Global stylesheet (Tailwind v4) ───────────────────────────── -->
+		<!-- Imported in frontmatter so Astro/Vite handles bundling correctly -->
+
+		<!-- ── JSON-LD structured data ───────────────────────────────────── -->
+		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+		<!-- ── Umami analytics ───────────────────────────────────────────── -->
+		<!--
+			Rendered only when PUBLIC_UMAMI_WEBSITE_ID is set.
+			Set it in .env (and .env.example) — never hardcode the id here.
+			The `defer` attribute keeps it out of the critical rendering path.
+		-->
+		{umamiId && (
+			<script
+				defer
+				src="https://umami.heymaia.dev/script.js"
+				data-website-id={umamiId}
+			/>
+		)}
+
+		<!-- ── Page-specific head content ────────────────────────────────── -->
+		<!-- E.g. <link slot="head" rel="preload" href="..." as="image" /> -->
+		<slot name="head" />
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>

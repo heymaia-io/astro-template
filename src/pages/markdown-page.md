@@ -1,5 +1,6 @@
 ---
 title: 'Markdown + Tailwind'
+description: 'A demo Markdown page showing how Tailwind classes and per-page SEO frontmatter work together in this Astro template.'
 layout: ../layouts/main.astro
 ---
 

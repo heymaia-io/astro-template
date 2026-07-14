@@ -1,17 +1,27 @@
 ---
-import '../styles/global.css';
-const { content } = Astro.props;
+/**
+ * main.astro — layout for Markdown/MDX pages (set via `layout:` frontmatter).
+ *
+ * Thin wrapper over BaseLayout so Markdown pages get the full SEO <head>.
+ * Astro passes the page's frontmatter as `Astro.props.frontmatter`, so any of
+ * BaseLayout's SEO fields can be set per-page directly in the .md frontmatter:
+ *
+ *   ---
+ *   layout: ../layouts/main.astro
+ *   title: My Post
+ *   description: A short, compelling summary under ~155 characters.
+ *   type: article
+ *   publishedTime: 2026-01-15
+ *   ---
+ */
+import BaseLayout from './BaseLayout.astro';
+
+const { frontmatter } = Astro.props;
+const { title, ...seo } = frontmatter ?? {};
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<title>{content.title}</title>
-	</head>
-	<body>
+<BaseLayout title={title ?? 'Untitled'} {...seo}>
+	<main class="prose mx-auto px-4 py-8">
 		<slot />
-	</body>
-</html>
+	</main>
+</BaseLayout>

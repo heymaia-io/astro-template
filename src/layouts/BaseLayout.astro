@@ -26,6 +26,8 @@ interface Props {
 	description?: string;
 	/** Absolute URL for OG / Twitter card image. Defaults to /og-default.png. */
 	image?: string;
+	/** Alt text for the OG / Twitter image (accessibility + richer previews). */
+	imageAlt?: string;
 	/**
 	 * Canonical URL for this page. When omitted the layout derives one from
 	 * Astro.url + Astro.site. Pass an absolute URL string to override.
@@ -41,17 +43,33 @@ interface Props {
 	siteName?: string;
 	/** Theme color for browser chrome (mobile). */
 	themeColor?: string;
+	/** Twitter/X @handle for the site (e.g. "@heymaia"). Enables twitter:site. */
+	twitterSite?: string;
+	/** Twitter/X @handle for the content author. Enables twitter:creator. */
+	twitterCreator?: string;
+	/** ISO date the article was published — only used when type="article". */
+	publishedTime?: string;
+	/** ISO date the article was last modified — only used when type="article". */
+	modifiedTime?: string;
+	/** Author name — used for article:author and JSON-LD when type="article". */
+	author?: string;
 }
 
 const {
 	title,
 	description = '',
 	image = '/og-default.png',
+	imageAlt = '',
 	noindex = false,
 	lang = 'en',
 	type = 'website',
 	siteName = '',
 	themeColor = '#ffffff',
+	twitterSite = '',
+	twitterCreator = '',
+	publishedTime = '',
+	modifiedTime = '',
+	author = '',
 } = Astro.props;
 
 // ---------------------------------------------------------------------------
@@ -93,15 +111,34 @@ if (image.startsWith('http')) {
 const umamiId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
 
 // ---------------------------------------------------------------------------
-// JSON-LD — minimal WebSite structured data. Gives search engines and AI
-// answer engines a machine-readable description of the site.
+// JSON-LD — structured data. Gives search engines and AI answer engines a
+// machine-readable description of the page. Emits WebSite for normal pages and
+// Article (with dates/author) when type="article".
 // ---------------------------------------------------------------------------
-const jsonLd = {
-	'@context': 'https://schema.org',
-	'@type': 'WebSite',
-	...(siteName ? { name: siteName } : {}),
-	...(Astro.site ? { url: Astro.site.href } : {}),
-};
+const jsonLd =
+	type === 'article'
+		? {
+				'@context': 'https://schema.org',
+				'@type': 'Article',
+				headline: title,
+				...(description ? { description } : {}),
+				...(ogImageURL ? { image: ogImageURL } : {}),
+				...(publishedTime ? { datePublished: publishedTime } : {}),
+				...(modifiedTime ? { dateModified: modifiedTime } : {}),
+				...(author ? { author: { '@type': 'Person', name: author } } : {}),
+				...(siteName
+					? { publisher: { '@type': 'Organization', name: siteName } }
+					: {}),
+				mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalURL },
+			}
+		: {
+				'@context': 'https://schema.org',
+				'@type': 'WebSite',
+				...(siteName ? { name: siteName } : {}),
+				...(description ? { description } : {}),
+				...(Astro.site ? { url: Astro.site.href } : {}),
+				inLanguage: lang,
+			};
 ---
 
 <!doctype html>
@@ -123,7 +160,23 @@ const jsonLd = {
 		<title>{title}</title>
 		{description && <meta name="description" content={description} />}
 		<link rel="canonical" href={canonicalURL} />
-		{noindex && <meta name="robots" content="noindex,nofollow" />}
+		<!--
+			Robots: noindex pages get noindex,nofollow. Indexable pages get an
+			explicit directive that also opts into large image/snippet previews in
+			Google (defaults are conservative without this).
+		-->
+		{
+			noindex ? (
+				<meta name="robots" content="noindex,nofollow" />
+			) : (
+				<meta
+					name="robots"
+					content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+				/>
+			)
+		}
+		<!-- Point crawlers at the generated sitemap (see @astrojs/sitemap). -->
+		<link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
 
 		<!-- ── Open Graph ────────────────────────────────────────────────── -->
 		<meta property="og:type" content={type} />
@@ -131,14 +184,28 @@ const jsonLd = {
 		{description && <meta property="og:description" content={description} />}
 		<meta property="og:url" content={canonicalURL} />
 		<meta property="og:image" content={ogImageURL} />
+		{imageAlt && <meta property="og:image:alt" content={imageAlt} />}
 		{siteName && <meta property="og:site_name" content={siteName} />}
 		<meta property="og:locale" content={lang.replace('-', '_')} />
+		<!-- Article-specific OG metadata (only meaningful when type="article"). -->
+		{type === 'article' && publishedTime && (
+			<meta property="article:published_time" content={publishedTime} />
+		)}
+		{type === 'article' && modifiedTime && (
+			<meta property="article:modified_time" content={modifiedTime} />
+		)}
+		{type === 'article' && author && (
+			<meta property="article:author" content={author} />
+		)}
 
 		<!-- ── Twitter / X Card ─────────────────────────────────────────── -->
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={title} />
 		{description && <meta name="twitter:description" content={description} />}
 		<meta name="twitter:image" content={ogImageURL} />
+		{imageAlt && <meta name="twitter:image:alt" content={imageAlt} />}
+		{twitterSite && <meta name="twitter:site" content={twitterSite} />}
+		{twitterCreator && <meta name="twitter:creator" content={twitterCreator} />}
 
 		<!-- ── Favicons ──────────────────────────────────────────────────── -->
 		<!-- SVG is preferred by modern browsers; ICO is the legacy fallback -->
@@ -158,11 +225,15 @@ const jsonLd = {
 			The `defer` attribute keeps it out of the critical rendering path.
 		-->
 		{umamiId && (
-			<script
-				defer
-				src="https://umami.heymaia.dev/script.js"
-				data-website-id={umamiId}
-			/>
+			<>
+				<link rel="preconnect" href="https://umami.heymaia.dev" crossorigin />
+				<script
+					is:inline
+					defer
+					src="https://umami.heymaia.dev/script.js"
+					data-website-id={umamiId}
+				/>
+			</>
 		)}
 
 		<!-- ── Page-specific head content ────────────────────────────────── -->

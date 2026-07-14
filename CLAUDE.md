@@ -17,6 +17,32 @@ Package manager is **pnpm** (Node ≥ 22.12). Deploy uses **Python 3 stdlib only
 
 There is no test/lint setup.
 
+## SEO layer
+
+Every page must render through `src/layouts/BaseLayout.astro` — the single source
+of truth for the `<head>` (title, description, canonical, robots, Open Graph,
+Twitter Card, JSON-LD, favicons, analytics). It takes typed props (`title` is the
+only required one; `description`, `image`, `imageAlt`, `type`, `siteName`,
+`noindex`, `twitterSite`, `publishedTime`, etc. are optional). `main.astro` is a
+thin wrapper over it for Markdown/MDX pages — it reads the page's `frontmatter`
+and forwards every key as a BaseLayout prop, so `.md` files set SEO in frontmatter.
+
+Site-wide SEO plumbing:
+
+- **`astro.config.mjs → site`** — production domain. Drives canonical URLs, OG
+  image URLs, the sitemap, and `robots.txt`. Ships as `https://example.com`; this
+  is the #1 per-project change.
+- **`@astrojs/sitemap`** integration → emits `/sitemap-index.xml` at build.
+- **`src/pages/robots.txt.ts`** — a build-time static endpoint that generates
+  `/robots.txt`; its `Sitemap:` line is derived from `site` so it never drifts.
+- **`public/og-default.png`** — 1200×630 social-share fallback (currently a
+  generated placeholder — projects replace it).
+
+When adding SEO features, extend `BaseLayout.astro` rather than adding ad-hoc
+`<head>` tags in pages. `prompts/seo-update.md` is the operator-facing prompt that
+tells an AI how to configure all of this for a new project; keep it in sync when
+the SEO surface changes.
+
 ## Architecture — hybrid static Astro + PHP endpoint
 
 The site is a static Astro build, but the contact form is served by a sibling **PHP file in `public/`**, not an Astro endpoint or third-party email service. Anything in `public/` is copied verbatim into `dist/`, so `public/contact.php` lands next to the static HTML on the host and runs under the host's PHP (Hostinger / cPanel — uses local `mail()` MTA which DKIM-signs outbound mail, so no SMTP creds are configured).

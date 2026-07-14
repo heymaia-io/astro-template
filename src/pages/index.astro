@@ -1,26 +1,19 @@
 ---
-import '../styles/global.css';
-// Component Imports
+import BaseLayout from '../layouts/BaseLayout.astro';
 import Button from '../components/Button.astro';
 
-// Full Astro Component Syntax:
-// https://docs.astro.build/basics/astro-components/
+// OPERATOR: every page should pass its own title + description. These are the
+// two highest-impact on-page SEO fields — see prompts/seo-update.md for how to
+// fill them in for a real project.
+const title = 'Astro + Tailwind Starter';
+const description =
+	'A production-ready Astro + Tailwind CSS starter template with SEO, sitemap, and a working contact form baked in.';
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro + TailwindCSS</title>
-	</head>
-
-	<body>
-		<div class="grid place-items-center h-screen content-center">
-			<Button>Tailwind Button in Astro!</Button>
-			<a href="/markdown-page" class="p-4 underline">Markdown is also supported...</a>
-		</div>
-	</body>
-</html>
+<BaseLayout title={title} description={description}>
+	<main class="grid place-items-center h-screen content-center">
+		<h1 class="sr-only">{title}</h1>
+		<Button>Tailwind Button in Astro!</Button>
+		<a href="/markdown-page" class="p-4 underline">Markdown is also supported...</a>
+	</main>
+</BaseLayout>
